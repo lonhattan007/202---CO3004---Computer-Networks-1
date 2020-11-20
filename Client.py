@@ -36,14 +36,19 @@ class Client:
 		self.teardownAcked = 0
 		self.connectToServer()
 		self.frameNbr = 0
+		#Extend 2: Reduce SETUP button by calling the setupMovie function right in the constructor
+		#so that hen a Client class is initialized, it automatically sends a SETUP request
+		#without the need of clicking the SETUP button
+		self.setupMovie()
 
 	def createWidgets(self):
 		"""Build GUI."""
 		# Create Setup button
-		self.setup = Button(self.master, width=20, padx=3, pady=3)
+		#Extend 2: This code segment is commented out to reduce the Setup button
+		"""self.setup = Button(self.master, width=20, padx=3, pady=3)
 		self.setup["text"] = "Setup"
 		self.setup["command"] = self.setupMovie
-		self.setup.grid(row=1, column=0, padx=2, pady=2)
+		self.setup.grid(row=1, column=0, padx=2, pady=2)"""
 		
 		# Create Play button		
 		self.start = Button(self.master, width=20, padx=3, pady=3)
@@ -66,7 +71,8 @@ class Client:
 		# Create a label to display the movie
 		self.label = Label(self.master, height=19)
 		self.label.grid(row=0, column=0, columnspan=4, sticky=W+E+N+S, padx=5, pady=5) 
-	
+
+	#Extend 2: this function is called in the constructor instead of being triggered by the Setup button
 	def setupMovie(self):
 		"""Setup button handler."""
 		if self.state == self.INIT:
@@ -77,6 +83,7 @@ class Client:
 		self.sendRtspRequest(self.TEARDOWN)		
 		self.master.destroy() # Close the gui window
 		os.remove(CACHE_FILE_NAME + str(self.sessionId) + CACHE_FILE_EXT) # Delete the cache image from video
+		#Extend 1: calculate packet loss rate
 		rate = float(self.counter / self.frameNbr)
 		print('-'*60 + '\nRTP Packet Loss Rate: ' + str(rate) + '\n' + '-'*60)
 		sys.exit(0)
@@ -107,12 +114,12 @@ class Client:
 					currFrameNbr = rtpPacket.seqNum()
 					print("Current Seq Num: " + str(currFrameNbr))
 
-					if self.frameNbr + 1 != rtpPacket.seqNum():
-						self.counter += 1
-						print ('!' * 60 + "\nPACKET LOSS\n" + '!' * 60)
-					currFrameNbr = rtpPacket.seqNum()
-
 					if currFrameNbr > self.frameNbr: # Discard the late packet
+						#Extend 1: calculate total number of lost data frames
+						if currFrameNbr - self.frameNbr != 1:
+							self.counter += currFrameNbr - self.frameNbr
+							print('PACKET LOSS: ', currFrameNbr - self.frameNbr)
+
 						self.frameNbr = currFrameNbr
 						self.updateMovie(self.writeFrame(rtpPacket.getPayload()))
 			except:
@@ -181,6 +188,7 @@ class Client:
 			self.requestSent = self.SETUP
 		
 		# Play request
+		#if requestCode == self.PLAY and self.state == self.READY:
 		elif requestCode == self.PLAY and self.state == self.READY:
 			# Update RTSP sequence number.
 			self.rtspSeq += 1
